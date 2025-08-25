@@ -6,4 +6,381 @@ html, body, #root {
 
 body {
   @apply bg-neutral-950 text-neutral-100;
+  /* Ensure proper mobile viewport handling */
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* Custom scrollbar for better mobile experience */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-neutral-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral-500;
+}
+
+/* Ensure video elements are properly sized on mobile */
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Improve touch targets on mobile */
+button {
+  min-height: 44px;
+}
+
+/* Responsive text sizing */
+@media (max-width: 640px) {
+  .text-responsive {
+    font-size: clamp(12px, 3vw, 16px);
+  }
+}
+
+/* Mobile-specific video grid optimizations */
+@media (max-width: 640px) {
+  .video-grid-mobile {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 896px) and (orientation: landscape) {
+  .landscape-optimized {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* Ensure proper aspect ratios on all devices */
+.aspect-video {
+  aspect-ratio: 16 / 9;
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Focus states for better accessibility */
+button:focus-visible,
+input:focus-visible {
+  @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-neutral-950;
+}
+
+/* Loading states */
+.loading {
+  @apply animate-pulse bg-neutral-800;
+}
+
+/* Error states */
+.error {
+  @apply bg-red-900/20 border-red-500 text-red-400;
+}
+
+/* Success states */
+.success {
+  @apply bg-green-900/20 border-green-500 text-green-400;
+}
+
+/* Professional gradient backgrounds */
+.gradient-bg {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+}
+
+.gradient-bg-alt {
+  background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 50%, #0c4a6e 100%);
+}
+
+/* Glass morphism effects */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Professional shadows */
+.shadow-professional {
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.shadow-elevated {
+  box-shadow: 
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Hover effects */
+.hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Professional button styles */
+.btn-primary {
+  @apply bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-semibold rounded-xl px-6 py-3 transition-all duration-300 shadow-glow hover:shadow-glow-lg;
+}
+
+.btn-secondary {
+  @apply bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl px-6 py-3 border border-white/20 transition-all duration-300 hover:border-white/30;
+}
+
+.btn-danger {
+  @apply bg-gradient-to-r from-error-500 to-error-600 hover:from-error-600 hover:to-error-700 text-white font-semibold rounded-xl px-6 py-3 transition-all duration-300 shadow-lg;
+}
+
+/* Input styles */
+.input-professional {
+  @apply bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-neutral-400 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/20 transition-all duration-200;
+}
+
+/* Card styles */
+.card-professional {
+  @apply bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 shadow-soft hover:shadow-medium transition-all duration-300;
+}
+
+/* Status indicators */
+.status-online {
+  @apply w-3 h-3 bg-success-500 rounded-full animate-pulse;
+}
+
+.status-busy {
+  @apply w-3 h-3 bg-warning-500 rounded-full animate-pulse;
+}
+
+.status-offline {
+  @apply w-3 h-3 bg-neutral-500 rounded-full;
+}
+
+/* Animation utilities */
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 20px rgba(14, 165, 233, 0.15); }
+  to { box-shadow: 0 0 40px rgba(14, 165, 233, 0.3); }
+}
+
+/* Professional typography */
+.text-gradient {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-alt {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .mobile-hidden {
+    display: none;
+  }
+  
+  .mobile-full {
+    width: 100%;
+  }
+}
+
+@media (min-width: 769px) {
+  .desktop-hidden {
+    display: none;
+  }
+}
+
+/* Professional spacing system */
+.space-section {
+  @apply space-y-8;
+}
+
+.space-content {
+  @apply space-y-6;
+}
+
+.space-elements {
+  @apply space-y-4;
+}
+
+.space-items {
+  @apply space-y-2;
+}
+
+/* Custom styles for react-grid-layout */
+.react-grid-layout {
+  position: relative;
+  transition: height 200ms ease;
+}
+
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+}
+
+.react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
+
+.react-grid-item.resizing {
+  z-index: 1;
+  will-change: width, height;
+}
+
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 3;
+  will-change: transform;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: rgba(59, 130, 246, 0.1);
+  border: 2px dashed rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  transition-duration: 100ms;
+  z-index: 2;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+}
+
+.react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+  z-index: 10;
+}
+
+.react-grid-item > .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 5px;
+  height: 5px;
+  border-right: 2px solid rgba(255, 255, 255, 0.4);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+/* Ensure grid items fill their containers completely */
+.react-grid-item > div {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Custom drag and focus styles */
+.drag-handle {
+  cursor: move;
+}
+
+.drag-handle:hover {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Focus tile styles */
+.focus-tile {
+  z-index: 10;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.8);
+}
+
+/* Ensure video tiles have no gaps */
+.video-tile-container {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Remove any default margins from grid layout */
+.layout {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure grid items are properly sized */
+.react-grid-item {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Force video tiles to fill 100% of their containers */
+.react-grid-item > div {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+}
+
+/* Ensure video elements fill their containers completely */
+.react-grid-item video {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  object-fit: fill !important;
+  object-position: center !important;
+}
+
+/* Force all video tile containers to be 100% */
+.video-tile-container,
+.react-grid-item > div > div {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
 }

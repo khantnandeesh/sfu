@@ -95,7 +95,11 @@ function getPeer(room, socketId) {
       consumers: new Map(),
       dataProducers: new Map(),
       dataConsumers: new Map(),
-      name: null
+      name: null,
+      micOn: true,
+      cameraOn: true,
+      isAdmin: false,
+      isWaiting: false
     });
   }
   return room.peers.get(socketId);
@@ -110,12 +114,20 @@ io.on("connection", (socket) => {
   );
   let currentRoomId = null;
 
+  // Add general event logging for debugging
+  console.log(
+    `[backend] Socket ${socket.id} connected, setting up event handlers`
+  );
+
   socket.on("createRoom", async (callback) => {
     try {
       const roomId = uuidv4();
       const room = getOrCreateRoom(roomId);
       if (!worker) await createWorker();
       if (!room.router) room.router = await createRouter();
+
+      // Don't add the creator to the room here - they'll be added when they join
+      // Just return the room ID
       callback({ roomId });
     } catch (err) {
       console.error("createRoom error", err);
@@ -123,7 +135,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("joinRoom", async ({ roomId, name }, callback) => {
+  socket.on("joinRoom", async ({ roomId, name, isCreator }, callback) => {
     try {
       if (!worker) await createWorker();
       const room = getOrCreateRoom(roomId);
@@ -133,6 +145,47 @@ io.on("connection", (socket) => {
       socket.join(roomId);
       const peer = getPeer(room, socket.id);
       peer.name = name || "Guest";
+
+      // Check if this is the creator (admin)
+      if (isCreator) {
+        peer.isAdmin = true;
+        peer.isWaiting = false;
+      } else {
+        // Check if this user was already approved (isWaiting should be false)
+        if (peer.isWaiting === false) {
+          // User was already approved, allow them to join
+          console.log(
+            `[backend] User ${socket.id} was already approved, allowing direct join`
+          );
+        } else {
+          // Check if there's an admin in the room (excluding the current user)
+          const existingAdmins = Array.from(room.peers.values()).filter(
+            (p) => p.isAdmin && p.id !== socket.id
+          );
+
+          if (existingAdmins.length > 0) {
+            // Put the user in waiting state
+            peer.isWaiting = true;
+            peer.isAdmin = false;
+
+            // Notify admin about waiting user
+            socket.to(roomId).emit("userWaiting", {
+              id: socket.id,
+              name: peer.name
+            });
+
+            callback({
+              status: "waiting",
+              message: "Waiting for admin approval to join the meeting"
+            });
+            return;
+          } else {
+            // No admin, allow direct join
+            peer.isAdmin = false;
+            peer.isWaiting = false;
+          }
+        }
+      }
 
       const rtpCapabilities = room.router.rtpCapabilities;
 
@@ -149,13 +202,36 @@ io.on("connection", (socket) => {
         }
       }
 
-      socket.to(roomId).emit("peerJoined", { id: socket.id, name: peer.name });
+      socket.to(roomId).emit("peerJoined", {
+        id: socket.id,
+        name: peer.name,
+        micOn: peer.micOn,
+        cameraOn: peer.cameraOn,
+        isAdmin: peer.isAdmin
+      });
+
+      const peersWithStates = Array.from(room.peers.values()).map((p) => ({
+        id: p.id,
+        name: p.name,
+        micOn: p.micOn,
+        cameraOn: p.cameraOn,
+        isAdmin: p.isAdmin
+      }));
+
+      console.log(
+        `[backend] New peer ${socket.id} joined. Room has ${room.peers.size} peers:`,
+        Array.from(room.peers.entries()).map(([id, peer]) => ({
+          id,
+          name: peer.name,
+          isAdmin: peer.isAdmin
+        }))
+      );
+      console.log(`[backend] Sending peers with states:`, peersWithStates);
+
       callback({
+        status: "joined",
         rtpCapabilities,
-        peers: Array.from(room.peers.values()).map((p) => ({
-          id: p.id,
-          name: p.name
-        })),
+        peers: peersWithStates,
         producers: existingProducers
       });
     } catch (err) {
@@ -290,6 +366,196 @@ io.on("connection", (socket) => {
     } catch (err) {
       console.error("resumeConsumer error", err);
       callback({ error: "Failed to resume consumer" });
+    }
+  });
+
+  socket.on("updateMicStatus", ({ roomId, peerId, micOn }) => {
+    try {
+      const room = rooms.get(roomId);
+      if (!room) return;
+      const peer = room.peers.get(peerId);
+      if (peer) {
+        peer.micOn = micOn;
+        console.log(`[backend] Peer ${peerId} mic status updated to: ${micOn}`);
+      }
+      socket.to(roomId).emit("peerMicUpdate", { peerId, micOn });
+    } catch (err) {
+      console.error("updateMicStatus error", err);
+    }
+  });
+
+  socket.on("updateCameraStatus", ({ roomId, peerId, cameraOn }) => {
+    try {
+      const room = rooms.get(roomId);
+      if (!room) return;
+      const peer = room.peers.get(peerId);
+      if (peer) {
+        peer.cameraOn = cameraOn;
+        console.log(
+          `[backend] Peer ${peerId} camera status updated to: ${cameraOn}`
+        );
+      }
+      socket.to(roomId).emit("peerCameraUpdate", { peerId, cameraOn });
+    } catch (err) {
+      console.error("updateCameraStatus error", err);
+    }
+  });
+
+  socket.on("ping", (data) => {
+    console.log(`[backend] Ping received from ${socket.id}:`, data);
+    socket.emit("pong", { message: "Backend is alive", timestamp: Date.now() });
+  });
+
+  socket.on("testEvent", (data) => {
+    console.log(`[backend] Test event received from ${socket.id}:`, data);
+    // Send back a response to confirm the connection is working
+    socket.emit("testResponse", {
+      message: "Backend received test event",
+      data
+    });
+  });
+
+  socket.on("approveUser", ({ roomId, userId }) => {
+    console.log(
+      `[backend] Received approveUser event from ${socket.id} for user ${userId} in room ${roomId}`
+    );
+    try {
+      console.log(
+        `[backend] Approve user request: ${socket.id} trying to approve ${userId} in room ${roomId}`
+      );
+
+      const room = rooms.get(roomId);
+      console.log(
+        `[backend] Looking for room ${roomId}, found:`,
+        room ? "yes" : "no"
+      );
+      console.log(`[backend] Available rooms:`, Array.from(rooms.keys()));
+      if (!room) {
+        console.log(`[backend] Room ${roomId} not found`);
+        return;
+      }
+
+      const adminPeer = room.peers.get(socket.id);
+      if (!adminPeer || !adminPeer.isAdmin) {
+        console.log(
+          `[backend] Non-admin ${socket.id} tried to approve user ${userId}`
+        );
+        return;
+      }
+
+      const waitingPeer = room.peers.get(userId);
+      console.log(
+        `[backend] Waiting peer found:`,
+        waitingPeer
+          ? {
+              id: waitingPeer.id,
+              name: waitingPeer.name,
+              isWaiting: waitingPeer.isWaiting
+            }
+          : "not found"
+      );
+
+      if (waitingPeer && waitingPeer.isWaiting) {
+        waitingPeer.isWaiting = false;
+
+        // Notify the approved user by finding their socket
+        const userSocket = io.sockets.sockets.get(userId);
+        if (userSocket) {
+          userSocket.emit("userApproved", { roomId });
+          console.log(`[backend] Sent userApproved event to ${userId}`);
+        } else {
+          console.log(`[backend] Could not find socket for user ${userId}`);
+        }
+
+        // Notify all participants about the new user
+        socket.to(roomId).emit("peerJoined", {
+          id: userId,
+          name: waitingPeer.name,
+          micOn: waitingPeer.micOn,
+          cameraOn: waitingPeer.cameraOn,
+          isAdmin: waitingPeer.isAdmin
+        });
+
+        console.log(`[backend] Admin ${socket.id} approved user ${userId}`);
+      }
+    } catch (err) {
+      console.error("approveUser error", err);
+    }
+  });
+
+  socket.on("rejectUser", ({ roomId, userId }) => {
+    console.log(
+      `[backend] Received rejectUser event from ${socket.id} for user ${userId} in room ${roomId}`
+    );
+    try {
+      const room = rooms.get(roomId);
+      if (!room) return;
+
+      const adminPeer = room.peers.get(socket.id);
+      if (!adminPeer || !adminPeer.isAdmin) {
+        console.log(
+          `[backend] Non-admin ${socket.id} tried to reject user ${userId}`
+        );
+        return;
+      }
+
+      const waitingPeer = room.peers.get(userId);
+      if (waitingPeer && waitingPeer.isWaiting) {
+        // Remove the waiting user
+        room.peers.delete(userId);
+
+        // Notify the rejected user by finding their socket
+        const userSocket = io.sockets.sockets.get(userId);
+        if (userSocket) {
+          userSocket.emit("userRejected", { roomId });
+        }
+
+        console.log(`[backend] Admin ${socket.id} rejected user ${userId}`);
+      }
+    } catch (err) {
+      console.error("rejectUser error", err);
+    }
+  });
+
+  socket.on("kickUser", ({ roomId, userId }) => {
+    console.log(
+      `[backend] Received kickUser event from ${socket.id} for user ${userId} in room ${roomId}`
+    );
+    try {
+      const room = rooms.get(roomId);
+      if (!room) return;
+
+      const adminPeer = room.peers.get(socket.id);
+      if (!adminPeer || !adminPeer.isAdmin) {
+        console.log(
+          `[backend] Non-admin ${socket.id} tried to kick user ${userId}`
+        );
+        return;
+      }
+
+      const targetPeer = room.peers.get(userId);
+      if (targetPeer && !targetPeer.isAdmin) {
+        // Close all transports for the kicked user
+        for (const transport of targetPeer.transports.values()) {
+          transport.close();
+        }
+
+        // Remove the peer
+        room.peers.delete(userId);
+
+        // Notify the kicked user by finding their socket
+        const userSocket = io.sockets.sockets.get(userId);
+        if (userSocket) {
+          userSocket.emit("userKicked", { roomId });
+        }
+
+        // Notify other participants
+        socket.to(roomId).emit("peerLeft", { id: userId });
+
+        console.log(`[backend] Admin ${socket.id} kicked user ${userId}`);
+      }
+    } catch (err) {
+      console.error("kickUser error", err);
     }
   });
 
