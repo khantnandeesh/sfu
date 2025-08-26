@@ -101,7 +101,7 @@ const DraggableVideoGrid = React.memo(({ participants, isMobile, localStream }) 
         onDragStop={onDragStop}
         onResizeStart={onResizeStart}
         onResizeStop={onResizeStop}
-        draggableHandle=".drag-handle"
+        resizeHandles={["se"]}
         margin={[0, 0]}
         containerPadding={[0, 0]}
         useCSSTransforms={true}
@@ -114,17 +114,12 @@ const DraggableVideoGrid = React.memo(({ participants, isMobile, localStream }) 
       >
         {participants.map((participant) => (
           <div key={participant.id} className="relative group w-full h-full">
-            <div className="drag-handle absolute top-2 left-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-move">
-              <div className="w-6 h-6 bg-black/50 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                <GripVertical className="w-3 h-3 text-white" />
-              </div>
+            {/* Visual drag hint only; dragging is allowed anywhere on tile */}
+            <div className="absolute top-1 left-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+              <GripVertical className="w-3 h-3 text-white/80 drop-shadow" />
             </div>
 
-            <button onClick={() => toggleTileFocus(participant.id)} className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <div className="w-6 h-6 bg-black/50 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                {focusedTile === participant.id ? <Minimize2 className="w-3 h-3 text-white" /> : <Maximize2 className="w-3 h-3 text-white" />}
-              </div>
-            </button>
+            {/* Maximize/minimize control removed for a cleaner minimalist look */}
 
             <div className={`w-full h-full transition-all duration-300 ${focusedTile === participant.id ? 'ring-2 ring-blue-500' : ''}`}>
               <VideoTile
@@ -138,23 +133,11 @@ const DraggableVideoGrid = React.memo(({ participants, isMobile, localStream }) 
               />
             </div>
 
-            <div className="absolute bottom-1 right-1 w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <div className="w-full h-full border-r-2 border-b-2 border-white/50 rounded-br-lg"></div>
-            </div>
+            {/* Minimal resize hint is controlled by CSS handle at bottom-right */}
           </div>
         ))}
       </ResponsiveGridLayout>
 
-      <AnimatePresence>
-        {isDragging && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-blue-500/10 pointer-events-none z-30"
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 });

@@ -10,10 +10,11 @@ const VideoTile = React.memo(({
   micOn,
   cameraOn,
   isAdmin,
+  isSpeaking,
 }) => {
   const videoRef = useRef(null);
-  const [showName, setShowName] = useState(false);
-  const nameTimeoutRef = useRef(null);
+  const [showOverlay, setShowOverlay] = useState(false);
+  const overlayTimeoutRef = useRef(null);
 
   // This effect safely attaches the stream to the video element.
   // It runs only when the `stream` prop itself changes.
@@ -24,32 +25,31 @@ const VideoTile = React.memo(({
   }, [stream]);
 
   const handleMouseEnter = () => {
-    setShowName(true);
-    // Clear any existing timeout
-    if (nameTimeoutRef.current) {
-      clearTimeout(nameTimeoutRef.current);
+    setShowOverlay(true);
+    if (overlayTimeoutRef.current) {
+      clearTimeout(overlayTimeoutRef.current);
     }
+    overlayTimeoutRef.current = setTimeout(() => {
+      setShowOverlay(false);
+    }, 2000);
   };
 
   const handleMouseLeave = () => {
-    // Hide name after 2.5 seconds
-    nameTimeoutRef.current = setTimeout(() => {
-      setShowName(false);
-    }, 2500);
+    // Keep overlay for 2s after last hover; timer set on enter
   };
 
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
-      if (nameTimeoutRef.current) {
-        clearTimeout(nameTimeoutRef.current);
+      if (overlayTimeoutRef.current) {
+        clearTimeout(overlayTimeoutRef.current);
       }
     };
   }, []);
 
   return (
     <div
-      className="relative w-full h-full bg-neutral-800 rounded-lg overflow-hidden shadow-lg group"
+      className={`relative w-full h-full rounded-2xl overflow-hidden border border-white/10 bg-white/5 group transition-shadow duration-300 ${isSpeaking ? 'ring-2 ring-success-500 shadow-glow' : 'shadow-soft'}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       style={{
@@ -88,55 +88,39 @@ const VideoTile = React.memo(({
           </div>
         )}
 
-        {/* Status Icons - Top Right */}
-        <div className="absolute top-2 right-2 flex flex-col space-y-1">
-          {/* Mic Status */}
-          <div className={`p-1.5 rounded-full transition-all duration-200 ${micOn
-            ? 'bg-green-500/80 text-white'
-            : 'bg-red-500/80 text-white'
-            }`}>
-            {micOn ? (
-              <Mic className="w-3 h-3" />
-            ) : (
-              <MicOff className="w-3 h-3" />
-            )}
-          </div>
+        {/* Subtle gradient veil for readability */}
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
 
-          {/* Camera Status */}
-          <div className={`p-1.5 rounded-full transition-all duration-200 ${cameraOn
-            ? 'bg-green-500/80 text-white'
-            : 'bg-red-500/80 text-white'
-            }`}>
-            {cameraOn ? (
-              <Video className="w-3 h-3" />
-            ) : (
-              <VideoOff className="w-3 h-3" />
-            )}
-          </div>
-        </div>
-
-        {/* Name Overlay - Bottom with hover effect */}
-        <div className={`absolute bottom-0 left-0 w-full transition-all duration-300 ${showName ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-          }`}>
-          <div className="p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+        {/* Hover Overlay: Name + Call status (2s) */}
+        <div className={`absolute inset-x-2 bottom-2 transition-all duration-300 ${showOverlay ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+          <div className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/50 backdrop-blur-sm border border-white/10 shadow-soft">
+            <div className="flex items-center space-x-2 min-w-0">
+              <div className="w-6 h-6 rounded-full bg-brand-500/20 flex items-center justify-center border border-brand-500/30">
+                <span className="text-xs font-bold text-brand-400">{name?.[0]?.toUpperCase() || '?'}</span>
+              </div>
+              <span className="text-white text-sm font-medium truncate">{name} {isLocal && '(You)'} {isAdmin && '(Admin)'}</span>
+            </div>
             <div className="flex items-center space-x-2">
-              <span className="text-white text-sm font-medium drop-shadow-lg">
-                {name} {isLocal && '(You)'}
-              </span>
+              <div className={`w-7 h-7 rounded-full border flex items-center justify-center ${micOn ? 'bg-success-500/15 text-success-400 border-success-500/30' : 'bg-error-500/15 text-error-400 border-error-500/30'}`}>
+                {micOn ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
+              </div>
+              <div className={`w-7 h-7 rounded-full border flex items-center justify-center ${cameraOn ? 'bg-success-500/15 text-success-400 border-success-500/30' : 'bg-error-500/15 text-error-400 border-error-500/30'}`}>
+                {cameraOn ? <Video className="w-3.5 h-3.5" /> : <VideoOff className="w-3.5 h-3.5" />}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Local indicator */}
         {isLocal && (
-          <div className="absolute top-2 left-2 px-2 py-1 bg-brand-500/80 rounded-full">
+          <div className="absolute top-2 left-2 px-2 py-1 bg-brand-500/80 rounded-full shadow-soft">
             <span className="text-xs font-medium text-white">You</span>
           </div>
         )}
 
         {/* Admin indicator */}
         {isAdmin && (
-          <div className="absolute top-2 left-2 px-2 py-1 bg-warning-500/80 rounded-full">
+          <div className="absolute top-2 left-2 px-2 py-1 bg-warning-500/80 rounded-full shadow-soft" style={{ left: isLocal ? '3.5rem' : '0.5rem' }}>
             <span className="text-xs font-medium text-white">Admin</span>
           </div>
         )}

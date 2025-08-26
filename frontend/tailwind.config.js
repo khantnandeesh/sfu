@@ -117,7 +117,7 @@ export default {
         xs: "2px"
       },
       borderRadius: {
-        "xl": "1rem",
+        xl: "1rem",
         "2xl": "1.5rem",
         "3xl": "2rem"
       }
